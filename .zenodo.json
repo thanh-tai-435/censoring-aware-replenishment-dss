@@ -1,0 +1,14 @@
+{
+  "title": "Censoring-aware replenishment decision-support system (code)",
+  "upload_type": "software",
+  "description": "Code for the paper <em>A censoring-aware decision-support system for perishable replenishment: turning latent demand recovery into service-level-optimal ordering</em>. The system recovers latent demand from hourly stockout labels, forecasts its distribution with global LightGBM quantile models, converts it into critical-fractile orders at the planner's cost and shelf-life settings, and evaluates the decisions against known demand in a semi-synthetic world built from FreshRetailNet-50K, with a transfer experiment on M5. <code>python run_all.py</code> reproduces every result on a CPU.",
+  "creators": [
+    {"name": "Pham, Tran Thanh Tai", "orcid": "0009-0005-6303-6849",
+     "affiliation": "Faculty of Information Systems, University of Economics and Law, Vietnam National University Ho Chi Minh City"},
+    {"name": "Nguyen, Thon Da", "orcid": "0000-0002-2660-5011",
+     "affiliation": "Faculty of Information Systems, University of Economics and Law, Vietnam National University Ho Chi Minh City"}
+  ],
+  "license": "MIT",
+  "keywords": ["decision support system", "censored demand", "perishable inventory", "newsvendor", "quantile regression", "stockout"],
+  "access_right": "open"
+}

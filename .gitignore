@@ -1,0 +1,13 @@
+# data are downloaded (run_all.py) -- never commit them
+data/
+# generated results
+out/
+out_lt/
+out_repro/
+*.log
+.venv/
+__pycache__/
+# unpublished manuscript (contains author identity; released with the article)
+paper/
+# personal planning notes
+*Paper Framework*.md
