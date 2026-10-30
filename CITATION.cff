@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "Censoring-aware replenishment decision-support system (code)"
 abstract: >-
-  Code for "A censoring-aware decision-support system for perishable replenishment: turning latent
-  demand recovery into service-level-optimal ordering". Recovers latent demand from hourly stockout
+  Code for "A censoring-aware decision-support system for perishable replenishment: from latent
+  demand recovery to cost-sensitive ordering". Recovers latent demand from hourly stockout
   labels, forecasts its distribution with LightGBM quantile models, converts it into critical-fractile
   orders, and evaluates decisions against known demand in a semi-synthetic world (FreshRetailNet-50K, M5).
 type: software

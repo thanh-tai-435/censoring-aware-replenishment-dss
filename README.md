@@ -1,7 +1,7 @@
 # Censoring-aware replenishment DSS
 
-Code for the paper *A censoring-aware decision-support system for perishable replenishment: turning latent
-demand recovery into service-level-optimal ordering* (submitted to Expert Systems With Applications).
+Code for the paper *A censoring-aware decision-support system for perishable replenishment: from latent
+demand recovery to cost-sensitive ordering* (submitted to Expert Systems With Applications).
 
 The system recovers latent demand from hourly stockout labels, forecasts its distribution with a global
 LightGBM quantile model, converts it into a critical-fractile order, and reports where availability is lost.
@@ -40,6 +40,7 @@ p11 8.2 min, all other steps under 1 min). A clean re-run reproduced every resul
 | `p9_baselines.py` | Dataset authors' SSA forecaster (ported) | `baseline_*.csv` |
 | `p10_transfer_m5.py` | Transfer to M5 with a daily censored-likelihood recovery | `m5_*.csv` |
 | `p11_confidence.py` | 3 seeds x series bootstrap, global and donor truth | `confidence_*.csv` |
+| `p13_review.py` | Stress tests: stress truth, Tobit and flat-profile recovery baselines, safety-stock and adaptive retailers, store-cluster bootstrap | `review_tests.csv` |
 | `figures.py` | Figures 1-4 | `figures/*.pdf` |
 | `tables.py` | Every number and table cited in the paper | `paper/numbers.tex`, `paper/tables/*.tex` |
 
