@@ -127,10 +127,25 @@ for L in [1, 2, 3]:
 m5 = pd.read_csv(f"{OUT}/m5_headline.csv"); m5 = m5[m5.tau == 0.8]
 for _, r in m5.iterrows():
     rows.append(("Transfer: M5 (daily, Tobit M1)", f"k={r.k}", r.gap_closed_to_oracle, np.nan, np.nan, r.rec_vs_cens_cost, np.nan, np.nan))
+STRESS = "Stress tests (store-cluster CI)"
+rv = pd.read_csv(f"{OUT}/review_tests.csv"); rv = rv[(rv.tau == 0.8) & (rv.recovery == "m1")].set_index(["truth", "retailer"])
+for key, lab in [(("stress", "mean"), "Stress truth (shocks, drifting shape)"), (("global", "safety"), "Safety-stock retailer"),
+                 (("global", "adaptive"), "Adaptive retailer")]:
+    r = rv.loc[key]
+    rows.append((STRESS, lab, r.gap_closed, r.gap_cluster_ci_lo, r.gap_cluster_ci_hi, r.cost_change, r.cluster_ci_lo, r.cluster_ci_hi))
+r2 = pd.read_csv(f"{OUT}/review2_tests.csv"); r2 = r2[r2.tau == 0.8].set_index("scenario")
+for key, lab in [("lead_time_2d", "Order lead time 2 days"), ("capacity_p75", "Stock capacity"),
+                 ("delivery_every_2d", "Deliveries every other day"), ("deferred_30", "30% of lost demand deferred"),
+                 ("substitution_30", "30% substitution in store"), ("all_combined", "All five combined")]:
+    r = r2.loc[key]
+    rows.append((STRESS, lab, r.gap_closed, r.gap_store_ci_lo, r.gap_store_ci_hi, r.cost_change, r.store_ci_lo, r.store_ci_hi))
+r = pd.read_csv(f"{OUT}/review2_rolling.csv").set_index("tau").loc[0.8]
+rows.append(("Rolling origin, 5 windows (store x day CI)", "35 evaluation days, days 62-96", r.gap_closed, r.gap_twoway_ci_lo,
+             r.gap_twoway_ci_hi, r.cost_change, r.twoway_ci_lo, r.twoway_ci_hi))
 g = pd.DataFrame(rows, columns=["group", "label", "gap", "glo", "ghi", "chg", "clo", "chi"])
 g.to_csv(f"{FIG}/fig3_data.csv", index=False)
 
-fig, axs = plt.subplots(1, 2, figsize=(7.4, 5.6), sharey=True, gridspec_kw=dict(wspace=0.08))
+fig, axs = plt.subplots(1, 2, figsize=(7.4, 7.6), sharey=True, gridspec_kw=dict(wspace=0.08))
 y, yt, yl, gy = 0, [], [], []
 for grp, s in g.groupby("group", sort=False):
     gy.append((grp, y)); y += 1
@@ -154,7 +169,7 @@ axs[1].set(xlim=(0, 0.8), xlabel="Cost reduction vs. same system, recovery off")
 axs[0].xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0)); axs[1].xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
 axs[0].set_title("Gap to full-visibility oracle closed", fontsize=9, loc="left", color=INK)
 axs[1].set_title("Cost reduction from recovery", fontsize=9, loc="left", color=INK)
-fig.text(0.5, -0.01, "All rows: critical fractile tau = 0.8 (cu:co = 4:1), scored on known true demand. Main rows: 95% series-bootstrap CI (narrower than the marker).", ha="center", fontsize=7.5, color=INK2)
+fig.text(0.5, -0.01, "All rows: critical fractile tau = 0.8 (cu:co = 4:1), scored on known true demand. Bars: 95% bootstrap intervals (often narrower than the marker); rows without bars are single runs.", ha="center", fontsize=7.5, color=INK2)
 panel(axs[0], "a"); panel(axs[1], "b")
 save(fig, "fig3_gap_closed")
 
@@ -175,7 +190,7 @@ axs[1].set(xlabel="Lost demand / latent demand", xlim=(0, 0.32)); axs[1].grid(ax
 axs[1].xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0)); axs[1].tick_params(axis="y", labelsize=6.5)
 axs[1].set_title("Lost-demand rate by city", fontsize=9, loc="left", color=INK)
 
-sa, sd = pd.read_csv(f"{OUT}/shap_dependence_sales.csv"), pd.read_csv(f"{OUT}/shap_dependence_demand.csv")
+sa, sd = pd.read_csv(f"{OUT}/shap_dependence_sales_q0.8.csv"), pd.read_csv(f"{OUT}/shap_dependence_demand_q0.8.csv")
 def eff(df):
     f = lambda feat, bins: df[(df.feature == feat) & df.bin.isin(bins)].shap_mean.mean()
     return [f("holiday_flag", [1]) - f("holiday_flag", [0]), f("discount", [0]) - f("discount", [3, 4]),
@@ -186,7 +201,7 @@ axs[2].barh(yy - 0.19, ea, 0.36, color=CENS, edgecolor=SURF, linewidth=1.5, labe
 axs[2].barh(yy + 0.19, ed, 0.36, color=REC, edgecolor=SURF, linewidth=1.5, label="Trained on recovered demand")
 axs[2].set_yticks(yy, labs, fontsize=7.5); axs[2].invert_yaxis(); axs[2].grid(axis="y", visible=False)
 axs[2].axvline(0, color=INK2, lw=0.8)
-axs[2].set(xlabel="SHAP effect on median forecast")
+axs[2].set(xlabel="SHAP effect on 0.8-quantile forecast")
 axs[2].set_title("Effects the censored model misreads", fontsize=9, loc="left", color=INK)
 axs[2].legend(fontsize=6.8, loc="upper center", bbox_to_anchor=(0.4, -0.2))
 for a, l in zip(axs, "abc"):

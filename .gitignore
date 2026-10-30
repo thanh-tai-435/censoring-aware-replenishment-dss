@@ -6,6 +6,7 @@ out_lt/
 out_repro/
 *.log
 .venv/
+.venv-dl/
 __pycache__/
 # unpublished manuscript (contains author identity; released with the article)
 paper/

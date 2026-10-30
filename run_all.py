@@ -5,7 +5,7 @@ FreshRetailNet-50K is downloaded automatically; M5 needs the Kaggle CLI (see REA
 import os, subprocess, sys, time, urllib.request
 
 STEPS = ["p1_audit", "p2_recovery", "p3_forecast", "p4_simulate", "p5_diagnostics", "p6_semisynthetic",
-         "p7_robustness", "p8_multiperiod", "p9_baselines", "p10_transfer_m5", "p11_confidence", "p13_review",
+         "p7_robustness", "p8_multiperiod", "p9_baselines", "p10_transfer_m5", "p11_confidence", "p13_review", "p14_review2", "p15_shelflife_dp",
          "figures", "tables"]
 HF = "https://huggingface.co/datasets/Dingdong-Inc/FreshRetailNet-50K/resolve/main/data/{}.parquet"
 

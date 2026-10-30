@@ -90,6 +90,63 @@ def retailer(true_h, k, policy="mean"):
     return obs_h, mask
 
 
+def retailer_ext(true_h, k=1.2, lag=0, cap=None, every=1, defer=0.0, subst=0.0, partner=None):
+    """Richer synthetic retailer, simulated hour by hour. Returns (realised true demand, observed sales, mask):
+    deferred and substituted demand depend on the retailer's own stockouts, so the truth is endogenous.
+    lag    = order lead time: day t's stock is set from observed sales up to day t-1-lag
+    cap    = per-series stock capacity (shelf / order limit)
+    every  = deliveries every `every` days, order-up-to k*every*mean; stock carries over between deliveries
+    defer  = share of yesterday's lost demand that comes back today (spread over today's hourly shape)
+    subst  = share (scalar or per series) of the partner series' lost demand (same store, previous hour) that
+             switches to this series; partner = index of that series (None = no substitution)
+    With defaults it reproduces retailer(true_h, k)."""
+    N, T_, Hn = true_h.shape
+    true_h = true_h.astype(np.float64).copy()
+    obs_h, mask = np.zeros_like(true_h), np.zeros_like(true_h)
+    left, lost_prev, lost_h = np.zeros(N), np.zeros(N), np.zeros(N)
+    for t in range(T_):
+        if defer and t:
+            sh = true_h[:, t]; tot = sh.sum(1, keepdims=True)
+            true_h[:, t] += defer * lost_prev[:, None] * np.where(tot > 0, sh / np.maximum(tot, 1e-12), 1 / Hn)
+        hi = t - lag
+        win = true_h[:, :7].sum(2) if hi < 7 else obs_h[:, hi - 7:hi].sum(2)
+        if t % every == 0:
+            stock = np.maximum(k * every * win.mean(1), left if every > 1 else 0)
+            if cap is not None:
+                stock = np.minimum(stock, cap)
+        else:
+            stock = left
+        lost = np.zeros(N)
+        for h in range(Hn):
+            if partner is not None:
+                true_h[:, t, h] += subst * lost_h[partner]
+            dem = true_h[:, t, h]
+            mask[:, t, h] = stock <= 1e-9                          # empty at the start of the hour
+            sold = np.minimum(stock, dem)
+            obs_h[:, t, h], stock = sold, stock - sold
+            lost_h = dem - sold; lost += lost_h
+        left, lost_prev = stock, lost
+    return true_h.astype(np.float32), obs_h.astype(np.float32), mask.astype(np.float32)
+
+
+def km_daily(S, cens, train):
+    """Recovery baseline: per-series Kaplan-Meier (product-limit) estimate of the daily demand distribution from
+    train days, censored days right-censored at sales; a censored day gets E[D | D >= S] under that estimate.
+    Mass left beyond the largest observation sits on it (Efron), so the upper tail is understated by design."""
+    D = S.astype(np.float64).copy()
+    for i in range(len(S)):
+        x, c = S[i, train[i]], cens[i, train[i]]
+        o = np.lexsort((c, x)); x, c = x[o], c[o]                  # ties: events before censorings
+        at_risk = len(x) - np.arange(len(x))
+        surv = np.cumprod(np.where(c, 1.0, 1 - 1 / at_risk))
+        mass = -np.diff(np.concatenate([[1.0], surv]))             # jump at each event
+        mass[-1] += surv[-1]                                       # Efron: remaining mass on the max
+        for t in np.where(cens[i])[0]:
+            s = S[i, t]; m = x >= s
+            D[i, t] = max(s, (x[m] * mass[m]).sum() / mass[m].sum()) if mass[m].sum() > 0 else s
+    return D
+
+
 def tobit_daily(S, cens, train, dow, iters=30):
     """Recovery baseline that ignores the hourly labels: a daily Tobit (censored Normal) model,
     D_it ~ N(a_i * w_dow(t), s_i^2), fitted by EM on the censored likelihood (Eq. 1); censored days get
@@ -111,22 +168,31 @@ def tobit_daily(S, cens, train, dow, iters=30):
     return D
 
 
-def censored_world(d, H, true_h, k, retailer_policy="mean", recovery="m1"):
+def censored_world(d, H, true_h, k, retailer_policy="mean", recovery="m1", retailer_fn=None):
     """What the planner sees: retailer-censored sales, plus recovery of it. Returns d with
     sales_c / demand_rec / demand_true / censored columns, the recovery-error table and world stats.
     recovery: m1 (hourly profile scaling, the proposed layer), uniform (same scaling with a flat intraday
-    profile), tobit (daily censored-Normal EM, no hourly information)."""
+    profile), tobit (daily censored-Normal EM, no hourly information), km (daily Kaplan-Meier), or a callable
+    f(obs_h, mask, obs_d, is_train) -> daily demand (e.g. a deep imputation model).
+    retailer_fn: true_h -> (realised true_h, obs_h, mask) replaces the built-in retailer."""
     N = len(true_h)
     night = H.sum(2) - H[..., W].sum(2)                        # sales outside 6-21h, taken as uncensored
     store = d.store_id.values.reshape(N, T)[:, 0]
     is_train = (d.split == "train").to_numpy().reshape(N, T)
+    if retailer_fn is not None:
+        true_h, obs_h, mask = retailer_fn(true_h)
+    else:
+        obs_h, mask = retailer(true_h, k, retailer_policy)
     true_d = night + true_h.sum(2)
-    obs_h, mask = retailer(true_h, k, retailer_policy)
     obs_d = night + obs_h.sum(2)
     cens = mask.sum(2) > 0
 
     # recovery on the censored world (train-only parameters, like the real pipeline)
-    if recovery == "tobit":
+    if callable(recovery):
+        rec_d = recovery(obs_h, mask, obs_d, is_train)
+    elif recovery == "km":
+        rec_d = km_daily(obs_d, cens, is_train)
+    elif recovery == "tobit":
         rec_d = tobit_daily(obs_d, cens, is_train, d.dow.values.reshape(N, T)[0])
     else:
         p = profiles(obs_h, mask, store, is_train, SHRINK_K)
@@ -155,10 +221,14 @@ def q_at(out, prefix, tau, quantiles):
 
 
 def experiment(d, H, true_h, k, quantiles=QUANTILES, cu_co=CU_CO, Ls=(1, 2, 3), tag="_semi", warmup=0, seed=SEED,
-               retailer_policy="mean", recovery="m1"):
-    """warmup: first eval days excluded from KPIs (inventory starts empty); matters for long horizons, L>1."""
+               retailer_policy="mean", recovery="m1", retailer_fn=None, eval_start=None):
+    """warmup: first eval days excluded from KPIs (inventory starts empty); matters for long horizons, L>1.
+    eval_start: rolling origin, evaluate days [eval_start, eval_start+7) with training on the days before it."""
     N = len(true_h)
-    d, rec, world = censored_world(d, H, true_h, k, retailer_policy, recovery)
+    if eval_start is not None:
+        t = np.tile(np.arange(T), N)
+        d = d.assign(split=np.where(t < eval_start, "train", np.where(t < eval_start + 7, "eval", "none")))
+    d, rec, world = censored_world(d, H, true_h, k, retailer_policy, recovery, retailer_fn)
 
     # forecasts for three planners
     out =d.loc[d.split == "eval", ["store_id", "product_id", "dt", "city_id", "demand_true", "sales_c"]].copy()

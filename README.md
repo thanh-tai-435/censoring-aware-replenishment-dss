@@ -17,12 +17,18 @@ python tables.py           # writes the paper's numbers and tables as LaTeX into
 
 The manuscript source is released together with the published article.
 
+`p16_timesnet.py` (TimesNet baseline) runs the deep model in a separate environment so the main pins stay
+untouched: `uv venv .venv-dl && uv pip install --python .venv-dl -r requirements-dl.txt
+--extra-index-url https://download.pytorch.org/whl/cpu`, then `python p16_timesnet.py` (about 2-3 h on a CPU).
+It is not part of `run_all.py`.
+
 M5 (used only for the transfer experiment) needs the [Kaggle CLI](https://github.com/Kaggle/kaggle-api)
 and acceptance of the competition rules; `run_all.py` prints the exact commands if the files are missing.
 
 Measured runtimes on an AMD Ryzen 7 6800HS (8 cores, 16 GB RAM), no GPU: the whole pipeline takes
 46 min (p1 49 s, p2 recovery 23 s, p3 forecasts 7.9 min, p6 12 min, p7 8.3 min, p8 4.5 min, p10 2.4 min,
 p11 8.2 min, all other steps under 1 min). A clean re-run reproduced every result file bit for bit.
+The reviewer stress tests added later (p13-p15) take about one hour more.
 
 ## Pipeline
 
@@ -41,6 +47,9 @@ p11 8.2 min, all other steps under 1 min). A clean re-run reproduced every resul
 | `p10_transfer_m5.py` | Transfer to M5 with a daily censored-likelihood recovery | `m5_*.csv` |
 | `p11_confidence.py` | 3 seeds x series bootstrap, global and donor truth | `confidence_*.csv` |
 | `p13_review.py` | Stress tests: stress truth, Tobit and flat-profile recovery baselines, safety-stock and adaptive retailers, store-cluster bootstrap | `review_tests.csv` |
+| `p14_review2.py` | Rolling origin (5 windows, store x day bootstrap), lead time / capacity / delivery schedule / deferred demand / substitution retailers, Kaplan-Meier recovery, city and category clusters | `review2_tests.csv`, `review2_rolling.csv` |
+| `p15_shelflife_dp.py` | Exact dynamic-programming benchmark for the shelf-life rule | `shelflife_dp.csv` |
+| `p16_timesnet.py` | Dataset authors' TimesNet recovery (PyPOTS) vs M1, paired, 2,000 series; needs `.venv-dl` (see below) | `review_timesnet.csv` |
 | `figures.py` | Figures 1-4 | `figures/*.pdf` |
 | `tables.py` | Every number and table cited in the paper | `paper/numbers.tex`, `paper/tables/*.tex` |
 

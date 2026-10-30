@@ -38,7 +38,7 @@ def pinball_table(out, truths, models, quantiles=QUANTILES):
 
 
 def explain_shap(m, X, name):
-    """Layer 6 knowledge discovery: TreeSHAP of the median model on a 5K sample of eval rows (LightGBM native, no extra deps).
+    """Layer 6 knowledge discovery: TreeSHAP of a quantile model on a 5K sample of eval rows (LightGBM native, no extra deps).
     Saves mean |SHAP| ranking and mean SHAP per value quintile of the business drivers (direction of effect)."""
     X = X.sample(min(len(X), 5000), random_state=SEED)   # ponytail: exact TreeSHAP costs trees*leaves*depth^2 per row
     sv = pd.DataFrame(m.predict(X, pred_contrib=True)[:, :-1], columns=X.columns, index=X.index)
@@ -51,9 +51,10 @@ def explain_shap(m, X, name):
     pd.concat(dep).round(4).to_csv(f"{OUT}/shap_dependence{name}.csv", index=False)
 
 
-def forecast(d, targets, out, tag="", quantiles=QUANTILES, explain=False, seed=SEED):
+def forecast(d, targets, out, tag="", quantiles=QUANTILES, explain=(), seed=SEED):
     """Fit one quantile model per (target, q) on train days >= 28 and add eval-day predictions to out.
-    d: daily table sorted by (series, day) with a 'censored' column; targets: {name: column}."""
+    d: daily table sorted by (series, day) with a 'censored' column; targets: {name: column}.
+    explain: quantiles whose model gets a SHAP analysis (files shap{tag}_{target}[_q{q}].csv, no suffix for 0.5)."""
     g = d.groupby(["store_id", "product_id"], sort=False)
     t = g.cumcount().values
     d = d.assign(cens_lag1=g.censored.shift(1),
@@ -74,8 +75,8 @@ def forecast(d, targets, out, tag="", quantiles=QUANTILES, explain=False, seed=S
             if q == 0.5:
                 imp = pd.Series(m.feature_importance("gain"), F.columns).sort_values(ascending=False)
                 imp.to_csv(f"{OUT}/importance{tag}_{target}.csv")
-                if explain:
-                    explain_shap(m, F[eval_rows], f"{tag}_{target}")
+            if q in explain:
+                explain_shap(m, F[eval_rows], f"{tag}_{target}" + ("" if q == 0.5 else f"_q{q}"))
         qc = [f"{target}_q{q}" for q in quantiles]
         out[qc] = np.sort(out[qc].values, axis=1)           # no quantile crossing
     return out
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     d = pd.read_parquet(f"{OUT}/recovered.parquet")
     out = d.loc[d.split == "eval", ["store_id", "product_id", "dt", "city_id", "first_category_id",
                                     "sale_amount", "demand", "censored"]].copy()
-    forecast(d, {"sales": "sale_amount", "demand": "demand"}, out, explain=True)
+    forecast(d, {"sales": "sale_amount", "demand": "demand"}, out, explain=(0.5, 0.8))
     out.to_parquet(f"{OUT}/forecasts.parquet")
     # (A) uncensored eval days' sales, (B) recovered demand on all days
     acc = pinball_table(out, [("A uncensored days, D=sales", out.censored == 0, out.sale_amount),

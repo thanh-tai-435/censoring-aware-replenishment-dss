@@ -1,0 +1,5 @@
+torch==2.15.0
+pypots==1.5
+numpy==2.4.6
+pandas==3.1.0
+pyarrow==26.0.0
