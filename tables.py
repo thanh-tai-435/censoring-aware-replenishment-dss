@@ -227,6 +227,11 @@ tn = pd.read_csv(f"{OUT}/review_timesnet.csv"); tn8 = tn[tn.tau == 0.8].set_inde
 for nm, fn in [("Sub", "review_timesnet_n2000_global.csv"), ("CPU", "review_timesnet_cpu_n2000.csv")]:
     r = pd.read_csv(f"{OUT}/{fn}").query("tau == 0.8 and truth == 'global' and recovery == 'timesnet'").iloc[0]
     N[f"TimesNet{nm}Gap"], N[f"TimesNet{nm}Bias"] = pct(r.gap_closed, 0), spct(r.rec_bias_cens_days)
+# all 50K series (paired M1 re-run on the same world)
+t50 = pd.read_csv(f"{OUT}/review_timesnet_n50000.csv").query("tau == 0.8").set_index(["truth", "recovery"])
+for truth, sfx in [("global", ""), ("stress", "Stress")]:
+    N[f"TimesNetFull{sfx}Gap"], N[f"TimesNetFull{sfx}Bias"] = pct(t50.loc[(truth, "timesnet")].gap_closed, 0), spct(t50.loc[(truth, "timesnet")].rec_bias_cens_days)
+    N[f"MOneFull{sfx}Gap"] = pct(t50.loc[(truth, "m1")].gap_closed, 0)
 row = lambda r, lo, hi, glo, ghi: (f"{pct(r.stockout_day_rate, 0)} & {spct(r.rec_bias_cens_days)} & {spct(r.cost_change)} [{spct(r[lo])}, {spct(r[hi])}] & "
                                    f"{pct(r.gap_closed, 0)} [{pct(r[glo], 0)}, {pct(r[ghi], 0)}] & {spct(r.day_change_min, 0)} to {spct(r.day_change_max, 0)}")
 with open(f"{P}/tables/tab_review.tex", "w") as f:
