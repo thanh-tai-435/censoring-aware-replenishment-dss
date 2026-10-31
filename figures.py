@@ -140,7 +140,7 @@ for key, lab in [("lead_time_2d", "Order lead time 2 days"), ("capacity_p75", "S
     r = r2.loc[key]
     rows.append((STRESS, lab, r.gap_closed, r.gap_store_ci_lo, r.gap_store_ci_hi, r.cost_change, r.store_ci_lo, r.store_ci_hi))
 r = pd.read_csv(f"{OUT}/review2_rolling.csv").set_index("tau").loc[0.8]
-rows.append(("Rolling origin, 5 windows (store x day CI)", "35 evaluation days, days 62-96", r.gap_closed, r.gap_twoway_ci_lo,
+rows.append(("Rolling origin, 5 windows (store x day CI)", "35 evaluation days, days 63-97", r.gap_closed, r.gap_twoway_ci_lo,
              r.gap_twoway_ci_hi, r.cost_change, r.twoway_ci_lo, r.twoway_ci_hi))
 g = pd.DataFrame(rows, columns=["group", "label", "gap", "glo", "ghi", "chg", "clo", "chi"])
 g.to_csv(f"{FIG}/fig3_data.csv", index=False)
