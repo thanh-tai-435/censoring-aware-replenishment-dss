@@ -98,5 +98,5 @@ for truth, rec in [(t, m) for t in TRUTHS for m in ["m1", "timesnet"]]:
                          gap_closed=(cs["cens"] - cs["rec"]).sum() / (cs["cens"] - cs["oracle"]).sum(),
                          gap_store_ci_lo=np.percentile(gap, 2.5), gap_store_ci_hi=np.percentile(gap, 97.5)))
     print(pd.DataFrame(rows[-3:]).round(3).to_string(index=False), flush=True)
-suffix = ("_smoke" if EPOCHS != "5" else "") + ("" if N_SERIES >= 10_000 else f"_n{N}") + ("" if len(TRUTHS) == 2 else f"_{TRUTHS[0]}")
+suffix = ("_smoke" if EPOCHS != "5" else "") + ("" if N_SERIES == 10_000 else f"_n{N}") + ("" if len(TRUTHS) == 2 else f"_{TRUTHS[0]}")
 pd.DataFrame(rows).round(4).to_csv(f"{OUT}/review_timesnet{suffix}.csv", index=False)
