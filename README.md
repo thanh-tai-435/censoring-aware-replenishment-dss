@@ -20,7 +20,7 @@ The manuscript source is released together with the published article.
 `p16_timesnet.py` (TimesNet baseline) runs the deep model in a separate environment so the main pins stay
 untouched: `uv venv .venv-dl && uv pip install --python .venv-dl -r requirements-dl.txt
 --extra-index-url https://download.pytorch.org/whl/cpu`, then `python p16_timesnet.py`. It is not part of `run_all.py`.
-For all 10K series TimesNet needs a GPU: run `TIMESNET_MODE=export python p16_timesnet.py` on a GPU machine (we used a
+For the 10K-series sample TimesNet needs a GPU: run `TIMESNET_MODE=export python p16_timesnet.py` on a GPU machine (we used a
 free Kaggle T4, about 10 min per epoch; set `DL_PY` to that machine's Python with CUDA torch and PyPOTS), copy the
 `out/timesnet_imp_*.npz` files back, and run `TIMESNET_MODE=import python p16_timesnet.py` locally; the import checks
 a hash of the censored world, so both sides must use the same pinned NumPy.
@@ -52,7 +52,7 @@ The reviewer stress tests added later (p13-p15) take about one hour more.
 | `p13_review.py` | Stress tests: stress truth, Tobit and flat-profile recovery baselines, safety-stock and adaptive retailers, store-cluster bootstrap | `review_tests.csv` |
 | `p14_review2.py` | Rolling origin (5 windows, store x day bootstrap), lead time / capacity / delivery schedule / deferred demand / substitution retailers, Kaplan-Meier recovery, city and category clusters | `review2_tests.csv`, `review2_rolling.csv` |
 | `p15_shelflife_dp.py` | Exact dynamic-programming benchmark for the shelf-life rule | `shelflife_dp.csv` |
-| `p16_timesnet.py` | Dataset authors' TimesNet recovery (PyPOTS) vs M1, paired, all 10K series; GPU export + CPU import (see below) | `review_timesnet.csv` |
+| `p16_timesnet.py` | Dataset authors' TimesNet recovery (PyPOTS) vs M1, paired, 10K-series sample (seed 0); GPU export + CPU import (see below) | `review_timesnet.csv` |
 | `figures.py` | Figures 1-4 | `figures/*.pdf` |
 | `tables.py` | Every number and table cited in the paper | `paper/numbers.tex`, `paper/tables/*.tex` |
 

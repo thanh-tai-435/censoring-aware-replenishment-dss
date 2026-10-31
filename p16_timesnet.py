@@ -1,12 +1,12 @@
 """Decision-level comparison with the dataset authors' deep-imputation recovery (TimesNet, frn-50k-baseline).
 TimesNet replaces Layer 2 in the semi-synthetic world; forecaster, order rule and simulator are unchanged, so the
 result is directly comparable with M1, which is re-run on the same world: the comparison is paired. TimesNet needs a GPU
-for all 10K series (about 10 min per epoch on a T4; a 2,000-series subsample takes about 12 min per epoch on a laptop CPU).
+for the 10K-series sample (seed 0, as in p13) (about 10 min per epoch on a T4; a 2,000-series subsample takes about 12 min per epoch on a laptop CPU).
 Training windows follow the authors (days 0-29, 30-59, 60-89); each evaluation day t is imputed from the window
 t-29..t only, so no later observation leaks into the lag features. TimesNet runs in .venv-dl (p16_timesnet_worker.py).
 TIMESNET_MODE: full (default) | export (impute only, save out/timesnet_imp_{truth}_n{N}.npz; run on a GPU, e.g. Kaggle)
 | import (load those files instead of training; the world hash must match), so LightGBM can run on a CPU machine.
-Writes out/review_timesnet.csv (all series; subsamples get an _n{N} suffix)."""
+Writes out/review_timesnet.csv (10K-series sample; smaller ones get an _n{N} suffix)."""
 import hashlib, os, subprocess, sys, time
 import numpy as np, pandas as pd
 from config import OUT, W
