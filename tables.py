@@ -321,7 +321,7 @@ print("\n".join(f"{k} = {v}" for k, v in N.items()))
 # ESWA: 3-5 highlights, <= 85 characters each, uploaded as a separate editable file
 HL = ["Censoring-aware DSS turns hourly stockout labels into cost-sensitive orders",
       f"Recovery closes {N['GapDonor']}-{N['GapGlobal']}% of the cost gap to a full-visibility oracle",
-      f"Expected cost falls {N['CostCut']}% (95% CI {N['CostCutLo']}-{N['CostCutHi']}%) versus the same DSS without recovery",
+      f"Expected cost falls {N['CostCut']}% (95% CI {N['CostCutLo']}-{N['CostCutHi']}%) versus the same system without recovery",
       "Gains hold across truth models, retailer policies, time windows and shelf lives",
       "Models fit on censored sales understate holiday and promotion uplift"]
 assert all(len(h) <= 85 for h in HL), [(len(h), h) for h in HL if len(h) > 85]
