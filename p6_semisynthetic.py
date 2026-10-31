@@ -221,9 +221,11 @@ def q_at(out, prefix, tau, quantiles):
 
 
 def experiment(d, H, true_h, k, quantiles=QUANTILES, cu_co=CU_CO, Ls=(1, 2, 3), tag="_semi", warmup=0, seed=SEED,
-               retailer_policy="mean", recovery="m1", retailer_fn=None, eval_start=None):
+               retailer_policy="mean", recovery="m1", retailer_fn=None, eval_start=None, reuse=None):
     """warmup: first eval days excluded from KPIs (inventory starts empty); matters for long horizons, L>1.
-    eval_start: rolling origin, evaluate days [eval_start, eval_start+7) with training on the days before it."""
+    eval_start: rolling origin, evaluate days [eval_start, eval_start+7) with training on the days before it.
+    reuse: 'out' of an earlier run on the same world and seed; its cens/oracle forecasts, which do not depend on
+    the recovery layer, are copied instead of refitted."""
     N = len(true_h)
     if eval_start is not None:
         t = np.tile(np.arange(T), N)
@@ -232,7 +234,13 @@ def experiment(d, H, true_h, k, quantiles=QUANTILES, cu_co=CU_CO, Ls=(1, 2, 3), 
 
     # forecasts for three planners
     out =d.loc[d.split == "eval", ["store_id", "product_id", "dt", "city_id", "demand_true", "sales_c"]].copy()
-    forecast(d, {"cens": "sales_c", "rec": "demand_rec", "oracle": "demand_true"}, out, tag=tag, quantiles=quantiles, seed=seed)
+    targets = {"cens": "sales_c", "rec": "demand_rec", "oracle": "demand_true"}
+    if reuse is not None:
+        assert (reuse.sales_c.values == out.sales_c.values).all() and (reuse.demand_true.values == out.demand_true.values).all()
+        for c in [c for c in reuse.columns if c.startswith(("cens_", "oracle_"))]:
+            out[c] = reuse[c].values
+        targets = {"rec": "demand_rec"}
+    forecast(d, targets, out, tag=tag, quantiles=quantiles, seed=seed)
     acc = pinball_table(out, [("true demand, all eval days", out.demand_true >= 0, out.demand_true)],
                         ["cens", "rec", "oracle"], quantiles=quantiles)
 

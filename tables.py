@@ -223,6 +223,10 @@ r8 = rt[rt.tau == 0.8].set_index(["truth", "retailer", "recovery"])
 r2 = pd.read_csv(f"{OUT}/review2_tests.csv"); r28 = r2[r2.tau == 0.8].set_index("scenario")
 ro = pd.read_csv(f"{OUT}/review2_rolling.csv").set_index("tau")
 tn = pd.read_csv(f"{OUT}/review_timesnet.csv"); tn8 = tn[tn.tau == 0.8].set_index(["truth", "recovery"])
+# 2K-series check against the earlier CPU run: same code on a GPU (Sub) vs CPU
+for nm, fn in [("Sub", "review_timesnet_n2000_global.csv"), ("CPU", "review_timesnet_cpu_n2000.csv")]:
+    r = pd.read_csv(f"{OUT}/{fn}").query("tau == 0.8 and truth == 'global' and recovery == 'timesnet'").iloc[0]
+    N[f"TimesNet{nm}Gap"], N[f"TimesNet{nm}Bias"] = pct(r.gap_closed, 0), spct(r.rec_bias_cens_days)
 row = lambda r, lo, hi, glo, ghi: (f"{pct(r.stockout_day_rate, 0)} & {spct(r.rec_bias_cens_days)} & {spct(r.cost_change)} [{spct(r[lo])}, {spct(r[hi])}] & "
                                    f"{pct(r.gap_closed, 0)} [{pct(r[glo], 0)}, {pct(r[ghi], 0)}] & {spct(r.day_change_min, 0)} to {spct(r.day_change_max, 0)}")
 with open(f"{P}/tables/tab_review.tex", "w") as f:
@@ -246,11 +250,8 @@ REC = [("M1 (proposed)", "hour of stockout, profile", ("global", "mean", "m1"), 
        ("Flat-profile scaling", "hour of stockout", ("global", "mean", "uniform"), ("stress", "mean", "uniform")),
        ("Daily Tobit", "censored days only", ("global", "mean", "tobit"), ("stress", "mean", "tobit")),
        ("Kaplan--Meier", "censored days only", "km_global", "km_stress"),
-       ("TimesNet (dataset authors)$^{a}$", "missing hours", ("tn", "global", "timesnet"), ("tn", "stress", "timesnet")),
-       ("M1, same subsample$^{a}$", "hour of stockout, profile", ("tn", "global", "m1"), ("tn", "stress", "m1"))]
+       ("TimesNet (dataset authors)", "missing hours", ("tn", "global", "timesnet"), ("tn", "stress", "timesnet"))]
 def rec_row(key):
-    if key[0] == "tn" and key[1:] not in tn8.index:              # run not available (see p16 notes)
-        return None, "\\multicolumn{2}{c}{not run$^{b}$}"
     if key[0] == "tn":
         r = tn8.loc[key[1:]]; lo, hi = "gap_store_ci_lo", "gap_store_ci_hi"
     elif isinstance(key, tuple):
@@ -266,11 +267,9 @@ with open(f"{P}/tables/tab_recmethods.tex", "w") as f:
         f.write(f"{lab} & {info} & {rec_row(kg)[1]} & {rec_row(ks)[1]}\\\\\n")
     f.write("\\bottomrule\n\\end{tabular*}\n")
 for lab, nm, kg, ks in [("km", "KM", "km_global", "km_stress"), ("tn", "TimesNet", ("tn", "global", "timesnet"), ("tn", "stress", "timesnet")),
-                        ("m1sub", "MOneSub", ("tn", "global", "m1"), ("tn", "stress", "m1"))]:
+                        ("m1p", "MOnePaired", ("tn", "global", "m1"), ("tn", "stress", "m1"))]:
     for key, sfx in [(kg, ""), (ks, "Stress")]:
         r, _ = rec_row(key)
-        if r is None:
-            continue
         N[f"{nm}{sfx}Gap"], N[f"{nm}{sfx}Bias"], N[f"{nm}{sfx}Cut"] = pct(r.gap_closed, 0), spct(r.rec_bias_cens_days), pct(-r.cost_change, 0)
 for key, nm in [("lead_time_2d", "Lead"), ("capacity_p75", "Cap"), ("delivery_every_2d", "Deliv"), ("deferred_30", "Defer"),
                 ("substitution_30", "Subst"), ("all_combined", "Comb")]:
