@@ -1,0 +1,48 @@
+% Fig. 1 (architecture). Build: pdflatex -output-directory out/figures fig1_architecture.tex
+\documentclass[tikz,border=2pt]{standalone}
+\usepackage[scaled=.92]{helvet}\renewcommand\familydefault{\sfdefault}
+\usepackage{fontawesome5}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+\definecolor{ink}{HTML}{0B0B0B}\definecolor{ink2}{HTML}{52514E}
+\definecolor{rec}{HTML}{2A78D6}\definecolor{cens}{HTML}{EB6834}
+\tikzset{
+  layer/.style={draw=ink2, line width=.6pt, rounded corners=2pt, fill=white, minimum height=2.3cm,
+                align=flush center, inner sep=3pt, text width=2.55cm},
+  flow/.style={-{Stealth[length=5pt]}, line width=.7pt, color=ink2},
+  lab/.style={font=\scriptsize\itshape, color=ink2, align=center},
+  group/.style={rounded corners=4pt, inner sep=4pt, line width=.5pt, dashed},
+}
+% icon, layer tag, title, one-line content
+\newcommand{\lay}[4]{{\Large\color{rec}#1}\\[3pt]{\scriptsize\color{ink2}#2}\\[1pt]{\small\bfseries\color{ink}#3}\\[2pt]{\scriptsize\color{ink2}#4}}
+\begin{document}
+\begin{tikzpicture}[node distance=1.35cm]
+  % decision pipeline
+  \node[layer] (data) {\lay{\faDatabase}{Layer 1}{Data}{hourly sales, stockout mask, covariates}};
+  \node[layer, right=of data] (m1) {\lay{\faUndo}{Layer 2 $\cdot$ M1}{Demand recovery}{in-stock rate scaled over stocked-out hours}};
+  \node[layer, right=of m1] (m2) {\lay{\faChartArea}{Layer 3 $\cdot$ M2}{Quantile forecast}{global LightGBM, day-ahead}};
+  \node[layer, right=of m2] (m3) {\lay{\faBalanceScale}{Layer 4 $\cdot$ M3}{Order decision}{$q^*=\hat F^{-1}(\tau)$\\$\tau=c_u/(c_u+c_o)$}};
+  \node[layer, right=of m3, draw=cens, line width=.8pt] (store) {\lay{\color{cens}\faStore}{Operation}{Store}{stock caps sales; stockouts censor the record}};
+  % configuration, evaluation, diagnostics
+  \node[layer, below=1.9cm of m1, minimum height=1.9cm] (cfg) {\lay{\faSlidersH}{Layer 0}{Configuration}{$c_u$, $c_o$, shelf life $L$, recovery on/off}};
+  \node[layer, below=1.9cm of m3, minimum height=1.9cm] (sim) {\lay{\faFlask}{Layer 5}{Simulation}{FIFO perishables, scored on true demand}};
+  \node[layer, below=1.9cm of store, minimum height=1.9cm] (diag) {\lay{\faSearch}{Layer 6 $\cdot$ M4}{Diagnostics}{lost demand, stockout patterns, SHAP}};
+
+  \draw[flow] (data) -- node[lab, above=1pt] {sales,\\mask} (m1);
+  \draw[flow] (m1) -- node[lab, above=1pt] {recovered\\demand} (m2);
+  \draw[flow] (m2) -- node[lab, above=1pt] {predictive\\quantiles} (m3);
+  \draw[flow] (m3) -- node[lab, above=1pt] {order\\$q^*$} (store);
+  \draw[flow] (cfg) -- node[lab, left, pos=.55] {recovery\\on/off} (m1);
+  \coordinate (mid) at ($(m3.south)!.45!(sim.north)$);
+  \draw[flow] ($(cfg.north east)+(-.4,0)$) |- node[lab, above, pos=.75] {$c_u$, $c_o$, $L$} ($(mid-|m3.west)+(.45,0)$) -- ($(m3.south west)+(.45,0)$);
+  \draw[flow] (m3) -- node[lab, right, pos=.7] {$q^*$, true demand} (sim);
+  \draw[flow] (sim.east) -- node[lab, above=1pt] {cost, fill,\\waste} (sim.east-|diag.west);
+  % re-censoring loop
+  \draw[-{Stealth[length=5pt]}, line width=.8pt, color=cens, dashed, rounded corners=6pt]
+    (store.north) -- ++(0,.7) -| node[lab, pos=.25, above, text=cens] {re-censoring loop: today's censored sales are tomorrow's training data} (data.north);
+
+  \begin{scope}[on background layer]
+    \node[group, draw=rec, fill=rec!6, fit=(m1)(m2)(m3), label={[font=\scriptsize\bfseries, text=rec, anchor=north west]south west:decision pipeline}] {};
+    \node[group, draw=ink2, fill=ink2!5, fit=(sim)(diag), label={[font=\scriptsize\bfseries, text=ink2]below:evaluation and diagnostics}] {};
+  \end{scope}
+\end{tikzpicture}
+\end{document}

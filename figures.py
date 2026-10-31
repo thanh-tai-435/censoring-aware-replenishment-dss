@@ -6,7 +6,6 @@ import os
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from config import OUT
 
 FIG = f"{OUT}/figures"; os.makedirs(FIG, exist_ok=True)
@@ -28,45 +27,7 @@ def panel(ax, letter):
     ax.text(-0.12, 1.04, letter, transform=ax.transAxes, fontweight="bold", fontsize=11, color=INK)
 
 
-# ---------------- Fig 1: architecture
-def box(ax, x, y, w, h, title, sub, fc="#eef3fb", ec=REC):
-    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.08", fc=fc, ec=ec, lw=1.2))
-    ax.text(x + w / 2, y + h * 0.64, title, ha="center", va="center", fontweight="bold", fontsize=9, color=INK)
-    ax.text(x + w / 2, y + h * 0.28, sub, ha="center", va="center", fontsize=7, color=INK2)
-
-
-def arrow(ax, p, q, text=None, style="-|>", ls="-", color=INK2, rad=0.0, tx=0.08):
-    ax.add_patch(FancyArrowPatch(p, q, arrowstyle=style, mutation_scale=11, lw=1.1, color=color, ls=ls,
-                                 connectionstyle=f"arc3,rad={rad}"))
-    if text:
-        ax.text((p[0] + q[0]) / 2 + tx, (p[1] + q[1]) / 2, text, fontsize=7, color=INK2, va="center", style="italic")
-
-
-fig, ax = plt.subplots(figsize=(7.2, 6.6)); ax.set_xlim(-0.15, 10.15); ax.set_ylim(1.2, 10.7); ax.axis("off")
-W, H, X = 4.9, 0.95, 2.55
-layers = [("Layer 1 - Data & censoring mask", "hourly sales & stockout labels, promo, weather"),
-          ("Layer 2 - M1 Latent-demand recovery", "in-stock hourly profile scaled over stocked-out hours"),
-          ("Layer 3 - M2 Probabilistic forecaster", "one global LightGBM quantile model, day-ahead"),
-          ("Layer 4 - M3 Decision layer", "critical fractile q* = F^-1(cu/(cu+co)), shelf-life adjusted"),
-          ("Layer 5 - Simulation harness", "FIFO perishable inventory, scored on true demand"),
-          ("Layer 6 - M4 Diagnostics", "lost-demand accounting, stockout patterns, SHAP")]
-contracts = ["daily table + censoring mask", "demand, recovery flag, imputed share", "predictive quantiles",
-             "order quantity q*", "cost, waste, fill rate, bias"]
-ys = [9.2 - i * 1.55 for i in range(6)]
-for (t, s), y in zip(layers, ys):
-    box(ax, X, y, W, H, t, s)
-for i, c in enumerate(contracts):
-    arrow(ax, (X + W / 2, ys[i]), (X + W / 2, ys[i + 1] + H), c)
-box(ax, 0.0, 5.3, 2.1, 1.7, "Layer 0 - Config", "cu, co, shelf life L,\nservice target,\nrecovery on/off", fc="#f4f3f0", ec=INK2)
-arrow(ax, (2.1, 6.6), (X, ys[1] + H / 2), color=INK2)      # recovery on/off -> M1
-arrow(ax, (2.1, 5.6), (X, ys[3] + H / 2), color=INK2)      # cost & service -> M3
-box(ax, 7.8, 4.3, 2.2, 1.7, "Store", "order q* -> shelf stock\n-> sales capped by\nstock (censored)", fc="#fdf0ea", ec=CENS)
-arrow(ax, (X + W, ys[3] + H / 2), (7.8, 4.9), color=CENS)
-arrow(ax, (8.9, 6.0), (X + W, ys[0] + H / 2), color=CENS, ls="--", rad=0.25)
-ax.text(8.9, 4.05, "dashed: re-censoring loop,\ncensored sales feed\nthe next forecast", fontsize=7, color=INK2,
-        style="italic", ha="center", va="top")
-ax.text(5.0, 10.45, "Seven swappable layers, one flat (store, SKU, day) table between each", ha="center", fontsize=9, color=INK)
-save(fig, "fig1_architecture")
+# Fig 1 (architecture) is TikZ: fig1_architecture.tex, built into out/figures by pdflatex.
 
 # ---------------- Fig 2: cost-service frontier (semi-synthetic world, known truth, L=1, all 50K series)
 k = pd.read_csv(f"{OUT}/semi_kpi.csv"); k = k[k.L == 1].copy()
